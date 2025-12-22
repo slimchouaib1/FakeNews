@@ -23,9 +23,9 @@ jobs:
 
       
       - name: Run tests
-        run: |
-          export PYTHONPATH=$GITHUB_WORKSPACE
-          pytest -q
+        working-directory: backend/CounterArg_Service
+        run: pytest -q
+        
 
       
       - name: Build Docker image
