@@ -12,14 +12,15 @@ def build_prompt(claim: str, evidence: str = "") -> str:
     if evidence:
         return (
             "Tu es un assistant qui génère un contre-argument clair et factuel.\n\n"
-            f"Claim:\n{claim}\n\n"
-            f"Evidence:\n{evidence}\n\n"
-            "Contre-argument (court, structuré, sans halluciner):"
+            f"CLAIM:\n{claim}\n\n"
+            f"EVIDENCE:\n{evidence}\n\n"
+            "COUNTER-ARGUMENT:"
         )
+
     return (
         "Tu es un assistant qui génère un contre-argument clair et factuel.\n\n"
-        f"Claim:\n{claim}\n\n"
-        "Contre-argument (court, structuré, sans halluciner):"
+        f"CLAIM:\n{claim}\n\n"
+        "COUNTER-ARGUMENT:"
     )
 
 
