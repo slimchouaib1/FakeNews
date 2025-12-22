@@ -1,84 +1,57 @@
-from typing import Dict, Any
+# backend/CounterArg_Service/generator.py
+from __future__ import annotations
 import time
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from .config import settings, load_best_config
 
-
-def load_prompt_template() -> str:
-    with open(settings.PROMPT_PATH, "r", encoding="utf-8") as f:
-        return f.read()
-
-
-def build_prompt(claim: str, context: str = "") -> str:
-    template = load_prompt_template()
-    # If context is provided (RAG on), inject it before the claim in a safe way
-    if context:
-        return template.replace("{claim}", f"{claim}\n\nContext:\n{context}")
-    return template.format(claim=claim)
-
-
-def format_ok(text: str) -> bool:
-    has_bullets = ("- " in text) or ("•" in text)
-    long_enough = len(text.split()) >= 25
-    return has_bullets and long_enough
-
+def build_prompt(claim: str) -> str:
+    claim = (claim or "").strip()
+    return (
+        "You are a fact-checking assistant.\n"
+        "Write a concise counter-argument to this claim.\n\n"
+        f"CLAIM: {claim}\n"
+        "COUNTER-ARGUMENT:"
+    )
 
 class CounterArgGenerator:
+    """
+    CPU-safe generator.
+    - No quantization in CI (no GPU).
+    - Lazy load possible.
+    """
     def __init__(self):
-        self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_NAME, use_fast=True)
+        self.cfg = load_best_config()
+        self.device = "cuda" if (settings.DEVICE == "cuda" and torch.cuda.is_available()) else "cpu"
 
-        use_gpu = torch.cuda.is_available()
-        
-        kwargs = {
-            "device_map": settings.DEVICE_MAP,
-            "torch_dtype": torch.float16 if use_gpu else torch.float32,
-        }
-        
-        if settings.QUANT == "4bit" and use_gpu:
-            kwargs["load_in_4bit"] = True
-        
+        # ✅ IMPORTANT: do NOT try 4bit/8bit in CI CPU
+        self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_NAME)
 
-        self.model = AutoModelForCausalLM.from_pretrained(settings.MODEL_NAME, **kwargs)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(settings.MODEL_NAME)
+        self.model.to(self.device)
         self.model.eval()
 
-    @torch.inference_mode()
-    def generate(self, claim: str, context: str = "") -> Dict[str, Any]:
-        best = load_best_config()
+    def generate(self, claim: str) -> dict:
+        prompt = build_prompt(claim)
 
-        max_new_tokens = int(best.get("max_new_tokens", settings.MAX_NEW_TOKENS))
-        temperature = float(best.get("temperature", settings.TEMPERATURE))
-        top_p = float(best.get("top_p", settings.TOP_P))
-
-        prompt = build_prompt(claim, context=context)
-
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        if torch.cuda.is_available():
-            inputs = {k: v.to("cuda") for k, v in inputs.items()}
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True)
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         t0 = time.time()
-        out = self.model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            do_sample=True,
-            eos_token_id=self.tokenizer.eos_token_id,
-            pad_token_id=self.tokenizer.eos_token_id,
-        )
-        latency_ms = (time.time() - t0) * 1000
+        with torch.no_grad():
+            out_ids = self.model.generate(
+                **inputs,
+                max_new_tokens=int(self.cfg.get("max_new_tokens", 200)),
+                do_sample=True,
+                temperature=float(self.cfg.get("temperature", 0.7)),
+                top_p=float(self.cfg.get("top_p", 0.9)),
+            )
+        latency = time.time() - t0
 
-        decoded = self.tokenizer.decode(out[0], skip_special_tokens=True)
-        key = "Counter-argument:"
-        if key in decoded:
-            decoded = decoded.split(key, 1)[-1].strip()
+        text = self.tokenizer.decode(out_ids[0], skip_special_tokens=True).strip()
 
         return {
-            "counter_argument": decoded,
-            "latency_ms": latency_ms,
-            "format_ok": format_ok(decoded),
-            "model": settings.MODEL_NAME,
-            "prompt_version": settings.PROMPT_VERSION,
-            "params": {"temperature": temperature, "top_p": top_p, "max_new_tokens": max_new_tokens},
+            "counterArgument": text,
+            "latency": latency,
+            "device": self.device
         }
