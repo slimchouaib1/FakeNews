@@ -3,7 +3,7 @@ import time
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-from config import settings, load_best_config
+from .config import settings, load_best_config
 
 
 def load_prompt_template() -> str:
@@ -29,12 +29,16 @@ class CounterArgGenerator:
     def __init__(self):
         self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_NAME, use_fast=True)
 
+        use_gpu = torch.cuda.is_available()
+        
         kwargs = {
             "device_map": settings.DEVICE_MAP,
-            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
+            "torch_dtype": torch.float16 if use_gpu else torch.float32,
         }
-        if settings.QUANT == "4bit":
+        
+        if settings.QUANT == "4bit" and use_gpu:
             kwargs["load_in_4bit"] = True
+        
 
         self.model = AutoModelForCausalLM.from_pretrained(settings.MODEL_NAME, **kwargs)
         self.model.eval()
