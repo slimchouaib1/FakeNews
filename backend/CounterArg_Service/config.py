@@ -1,33 +1,27 @@
-from __future__ import annotations
-
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
 import os
-import json
+from pydantic import BaseModel, ConfigDict
 
 
 class Settings(BaseModel):
+    # évite le warning "model_name conflict"
     model_config = ConfigDict(protected_namespaces=())
 
-    model_name: str = "google/flan-t5-base"
-    max_new_tokens: int = 256
-    temperature: float = 0.7
-    top_p: float = 0.9
-    use_gpu: bool = False
-    device: str = "cpu"
+    # Modèle (LLM) -> oui, c'est bien le "nom du modèle" que tu vas charger
+    model_name: str = os.getenv("MODEL_NAME", "google/flan-t5-base")
+
+    # Génération
+    max_new_tokens: int = int(os.getenv("MAX_NEW_TOKENS", "256"))
+    temperature: float = float(os.getenv("TEMPERATURE", "0.7"))
+    top_p: float = float(os.getenv("TOP_P", "0.9"))
+
+    # Device
+    device: str = os.getenv("DEVICE", os.getenv("device", "cpu"))
+    use_gpu: bool = os.getenv("USE_GPU", "false").lower() == "true"
+
+    # Compatibilité avec ton ancien code (settings.DEVICE)
+    @property
+    def DEVICE(self) -> str:
+        return self.device
 
 
-
-def load_best_config(path: str = "best_config.json") -> dict:
-    """
-    Charge la meilleure configuration depuis un fichier JSON
-    si le fichier existe.
-    """
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-# Instance globale des paramètres
-settings = Settings(**load_best_config())
+settings = Settings()
