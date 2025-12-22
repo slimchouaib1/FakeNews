@@ -8,7 +8,16 @@ from pydantic import BaseModel
 from .config import settings
 from .generator import build_prompt
 
+
 app = FastAPI(title="Counter-Argument Service")
+
+
+class PredictRequest(BaseModel):
+    claim: str
+
+
+class PredictResponse(BaseModel):
+    counterArgument: str
 
 
 class GenerateRequest(BaseModel):
@@ -22,45 +31,39 @@ class GenerateResponse(BaseModel):
 
 
 class DummyGenerator:
-    """Utilisé en CI (pas de dépendances lourdes)."""
-
     def generate(self, claim: str, evidence: str = ""):
         prompt = build_prompt(claim, evidence)
-        # réponse simple et déterministe pour les tests
         return {
-            "counterArgument": f"[CI MODE] Contre-argument basé sur le prompt: {prompt[:120]}...",
+            "counterArgument": f"[CI MODE] Contre-argument basé sur: {prompt[:120]}...",
             "device": "cpu",
         }
 
 
 @lru_cache
 def get_generator():
-    # Si on est en CI, on évite de charger un modèle lourd
     if os.getenv("CI", "").lower() == "true" or os.getenv("SKIP_MODEL_LOAD", "").lower() == "true":
         return DummyGenerator()
 
-    # Mode normal: vrai modèle
     from .generator import CounterArgGenerator
     return CounterArgGenerator()
 
 
 @app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "model": settings.model_name,
-        "device": settings.DEVICE,
-    }
+    return {"status": "ok", "model": settings.model_name, "device": settings.DEVICE}
 
 
+# ✅ endpoint attendu par les tests
+@app.post("/predict", response_model=PredictResponse)
+def predict(req: PredictRequest):
+    gen = get_generator()
+    out = gen.generate(req.claim, "")
+    return PredictResponse(counterArgument=out["counterArgument"])
+
+
+# endpoint optionnel (si tu veux garder /generate)
 @app.post("/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest):
     gen = get_generator()
-
-    # DummyGenerator retourne déjà le bon format
-    if isinstance(gen, DummyGenerator):
-        out = gen.generate(req.claim, req.evidence or "")
-        return GenerateResponse(counterArgument=out["counterArgument"], device=out["device"])
-
-    result = gen.generate(req.claim, req.evidence or "")
-    return GenerateResponse(counterArgument=result.counter_argument, device=result.used_device)
+    out = gen.generate(req.claim, req.evidence or "")
+    return GenerateResponse(counterArgument=out["counterArgument"], device=out["device"])
