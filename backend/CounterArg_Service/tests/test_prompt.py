@@ -1,5 +1,5 @@
 # backend/CounterArg_Service/tests/test_prompt.py
-from generator import build_prompt
+from backend.CounterArg_Service.generator import build_prompt
 
 def test_build_prompt():
     p = build_prompt("Some claim")
