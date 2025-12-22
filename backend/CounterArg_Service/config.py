@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 import os
 import json
 
 
 class Settings(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_name: str = "google/flan-t5-base"
     max_new_tokens: int = 256
     temperature: float = 0.7
     top_p: float = 0.9
     use_gpu: bool = False
     device: str = "cpu"
+
 
 
 def load_best_config(path: str = "best_config.json") -> dict:
