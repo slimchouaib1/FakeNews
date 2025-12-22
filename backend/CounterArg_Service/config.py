@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .config import settings
 
 
 def build_prompt(claim: str, evidence: str = "") -> str:
