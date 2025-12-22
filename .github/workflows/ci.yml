@@ -25,9 +25,10 @@ jobs:
       - name: Run tests
         working-directory: backend/CounterArg_Service
         env:
-          PYTHONPATH: .
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -q
+
 
       - name: Build Docker image
         working-directory: backend/CounterArg_Service
