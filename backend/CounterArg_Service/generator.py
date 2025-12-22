@@ -1,57 +1,80 @@
-# backend/CounterArg_Service/generator.py
 from __future__ import annotations
-import time
-import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from .config import settings, load_best_config
+from dataclasses import dataclass
+from typing import Optional
 
-def build_prompt(claim: str) -> str:
+from .config import settings
+
+
+def build_prompt(claim: str, evidence: str = "") -> str:
     claim = (claim or "").strip()
+    evidence = (evidence or "").strip()
+
+    if evidence:
+        return (
+            "Tu es un assistant qui génère un contre-argument clair et factuel.\n\n"
+            f"Claim:\n{claim}\n\n"
+            f"Evidence:\n{evidence}\n\n"
+            "Contre-argument (court, structuré, sans halluciner):"
+        )
     return (
-        "You are a fact-checking assistant.\n"
-        "Write a concise counter-argument to this claim.\n\n"
-        f"CLAIM: {claim}\n"
-        "COUNTER-ARGUMENT:"
+        "Tu es un assistant qui génère un contre-argument clair et factuel.\n\n"
+        f"Claim:\n{claim}\n\n"
+        "Contre-argument (court, structuré, sans halluciner):"
     )
+
+
+@dataclass
+class GenerationResult:
+    counter_argument: str
+    used_device: str = "cpu"
+
 
 class CounterArgGenerator:
     """
-    CPU-safe generator.
-    - No quantization in CI (no GPU).
-    - Lazy load possible.
+    Charge le modèle uniquement quand on instancie CounterArgGenerator().
+    En CI, on peut éviter d'instancier ce composant (voir app.py).
     """
-    def __init__(self):
-        self.cfg = load_best_config()
-        self.device = "cuda" if (settings.device == "cuda" and torch.cuda.is_available()) else "cpu"
 
-        # ✅ IMPORTANT: do NOT try 4bit/8bit in CI CPU
-        self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_NAME)
+    def __init__(self) -> None:
+        self.device = "cpu"
+        self._tokenizer = None
+        self._model = None
 
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(settings.MODEL_NAME)
-        self.model.to(self.device)
-        self.model.eval()
+        # Lazy import (évite de casser les tests si torch n'est pas installé)
+        try:
+            import torch  # noqa
+            from transformers import AutoTokenizer, AutoModelForSeq2SeqLM  # noqa
+        except Exception as e:
+            raise RuntimeError(
+                "Dépendances ML non disponibles (torch/transformers). "
+                "Installe les requirements 'full' pour activer la génération."
+            ) from e
 
-    def generate(self, claim: str) -> dict:
-        prompt = build_prompt(claim)
+        import torch
+        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True)
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        wanted = settings.DEVICE.lower()
+        self.device = "cuda" if (wanted == "cuda" and torch.cuda.is_available()) else "cpu"
 
-        t0 = time.time()
+        self._tokenizer = AutoTokenizer.from_pretrained(settings.model_name)
+        self._model = AutoModelForSeq2SeqLM.from_pretrained(settings.model_name).to(self.device)
+        self._model.eval()
+
+    def generate(self, claim: str, evidence: str = "") -> GenerationResult:
+        prompt = build_prompt(claim, evidence)
+
+        import torch
+
+        inputs = self._tokenizer(prompt, return_tensors="pt", truncation=True).to(self.device)
+
         with torch.no_grad():
-            out_ids = self.model.generate(
+            out = self._model.generate(
                 **inputs,
-                max_new_tokens=int(self.cfg.get("max_new_tokens", 200)),
+                max_new_tokens=settings.max_new_tokens,
+                temperature=settings.temperature,
+                top_p=settings.top_p,
                 do_sample=True,
-                temperature=float(self.cfg.get("temperature", 0.7)),
-                top_p=float(self.cfg.get("top_p", 0.9)),
             )
-        latency = time.time() - t0
 
-        text = self.tokenizer.decode(out_ids[0], skip_special_tokens=True).strip()
-
-        return {
-            "counterArgument": text,
-            "latency": latency,
-            "device": self.device
-        }
+        text = self._tokenizer.decode(out[0], skip_special_tokens=True).strip()
+        return GenerationResult(counter_argument=text, used_device=self.device)
