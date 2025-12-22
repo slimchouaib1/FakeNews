@@ -1,1 +1,1 @@
-# CounterArg_Service package
+__all__ = []
