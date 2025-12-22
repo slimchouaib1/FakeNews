@@ -2,13 +2,12 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 
-from config import settings
-from generator import CounterArgGenerator
-from monitoring.logger import log_request
+from .config import settings
+from .generator import CounterArgGenerator
+from .monitoring.logger import log_request
 
 app = FastAPI(title="Counter-Argumentation Service", version="1.0")
 
-# Lazy-loaded generator (avoid model load at import time)
 _gen: Optional[CounterArgGenerator] = None
 
 
@@ -32,7 +31,6 @@ class GenerateResponse(BaseModel):
 
 @app.post("/generate-counter", response_model=GenerateResponse)
 def generate_counter(req: GenerateRequest):
-    # Optional guard: only generate if fake
     if req.label is not None and req.label.lower() != "fake":
         return GenerateResponse(
             counter_argument="No counter-argument generated because the content was not labeled as FAKE.",
@@ -68,8 +66,9 @@ def generate_counter(req: GenerateRequest):
 
 @app.get("/health")
 def health():
-    # IMPORTANT: should not load the model
     return {
         "ok": True,
         "model": settings.MODEL_NAME,
         "prompt_version": settings.PROMPT_VERSION,
+        "use_rag": settings.USE_RAG,
+    }
