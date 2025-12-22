@@ -22,7 +22,7 @@ class CounterArgGenerator:
     """
     def __init__(self):
         self.cfg = load_best_config()
-        self.device = "cuda" if (settings.DEVICE == "cuda" and torch.cuda.is_available()) else "cpu"
+        self.device = "cuda" if (settings.device == "cuda" and torch.cuda.is_available()) else "cpu"
 
         # ✅ IMPORTANT: do NOT try 4bit/8bit in CI CPU
         self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_NAME)
