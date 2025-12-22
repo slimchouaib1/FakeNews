@@ -27,3 +27,11 @@ numpy==1.26.4            # 🔴 IMPORTANT: NumPy < 2.0
 # --- Utils ---
 tqdm
 requests
+
+#--MLFLOW--
+
+mlflow==2.15.1
+pytest==8.3.2
+python-dotenv==1.0.1
+
+
