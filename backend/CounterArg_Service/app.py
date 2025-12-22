@@ -7,28 +7,40 @@ from generator import CounterArgGenerator
 from monitoring.logger import log_request
 
 app = FastAPI(title="Counter-Argumentation Service", version="1.0")
-gen = CounterArgGenerator()
+
+# Lazy-loaded generator (avoid model load at import time)
+_gen: Optional[CounterArgGenerator] = None
+
+
+def get_generator() -> CounterArgGenerator:
+    global _gen
+    if _gen is None:
+        _gen = CounterArgGenerator()
+    return _gen
+
 
 class GenerateRequest(BaseModel):
     text: str = Field(..., description="The claim / fake-news text")
     label: Optional[str] = Field(None, description="Optional: Fake/Real from classifier")
     confidence: Optional[float] = Field(None, description="Optional: classifier confidence")
 
+
 class GenerateResponse(BaseModel):
     counter_argument: str
     metadata: Dict[str, Any]
 
+
 @app.post("/generate-counter", response_model=GenerateResponse)
 def generate_counter(req: GenerateRequest):
-    # Optional guard: generate only if fake
+    # Optional guard: only generate if fake
     if req.label is not None and req.label.lower() != "fake":
         return GenerateResponse(
             counter_argument="No counter-argument generated because the content was not labeled as FAKE.",
             metadata={"label": req.label, "confidence": req.confidence},
         )
 
-    # RAG not forced: if you have context later, you can pass it here.
-    result = gen.generate(req.text)
+    generator = get_generator()
+    result = generator.generate(req.text)
 
     log_request(
         endpoint="/generate-counter",
@@ -53,11 +65,11 @@ def generate_counter(req: GenerateRequest):
         },
     )
 
+
 @app.get("/health")
 def health():
+    # IMPORTANT: should not load the model
     return {
         "ok": True,
         "model": settings.MODEL_NAME,
         "prompt_version": settings.PROMPT_VERSION,
-        "use_rag": settings.USE_RAG,
-    }
