@@ -1,105 +1,49 @@
-from __future__ import annotations
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-from dataclasses import dataclass
-from typing import Optional
+from .generator import CounterArgGenerator
 
-from .config import settings
+app = FastAPI()
 
+# ✅ Important : ne pas casser l'import si torch n'est pas installé
+gen = None
+GEN_AVAILABLE = False
 
-def build_prompt(claim: str, evidence: str = "") -> str:
-    claim = (claim or "").strip()
-    evidence = (evidence or "").strip()
-
-    if evidence:
-        return (
-            "Tu es un assistant qui génère un contre-argument clair et factuel.\n\n"
-            f"CLAIM:\n{claim}\n\n"
-            f"EVIDENCE:\n{evidence}\n\n"
-            "COUNTER-ARGUMENT:"
-        )
-
-    return (
-        "Tu es un assistant qui génère un contre-argument clair et factuel.\n\n"
-        f"CLAIM:\n{claim}\n\n"
-        "COUNTER-ARGUMENT:"
-    )
+try:
+    gen = CounterArgGenerator()
+    GEN_AVAILABLE = True
+except RuntimeError:
+    # torch/transformers non disponibles en CI
+    GEN_AVAILABLE = False
 
 
-@dataclass
-class GenerationResult:
-    counter_argument: str
-    used_device: str = "cpu"
-    model_loaded: bool = False
+class PredictRequest(BaseModel):
+    claim: str
 
 
-class CounterArgGenerator:
-    """
-    Générateur robuste :
-    - En local (full deps), il charge le modèle.
-    - En CI (sans torch), il ne casse pas les imports/tests.
-    """
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-    def __init__(self) -> None:
-        self.device = "cpu"
-        self._tokenizer = None
-        self._model = None
-        self.available = False  # torch / transformers disponibles ?
 
-        try:
-            import torch  # noqa
-            from transformers import AutoTokenizer, AutoModelForSeq2SeqLM  # noqa
-        except Exception:
-            # ⚠️ Pas d'exception ici : CI doit passer
-            self.available = False
-            return
+@app.post("/predict")
+def predict(req: PredictRequest):
+    # ✅ Toujours répondre 200, même si torch absent
+    if not GEN_AVAILABLE or gen is None:
+        return {
+            "counterArgument": "(Mode CI) Dépendances ML (torch/transformers) non installées. "
+                               "Installe la version full pour activer la génération.",
+            "used_device": "cpu",
+            "model_loaded": False
+        }
 
-        import torch
-        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+    res = gen.generate(req.claim)
+    # si res est string ou objet (selon ton generator), on gère les 2 cas
+    if isinstance(res, str):
+        return {"counterArgument": res}
 
-        wanted = (settings.device or "cpu").lower()
-        self.device = "cuda" if (wanted == "cuda" and torch.cuda.is_available()) else "cpu"
-
-        self._tokenizer = AutoTokenizer.from_pretrained(settings.model_name)
-        self._model = AutoModelForSeq2SeqLM.from_pretrained(
-            settings.model_name
-        ).to(self.device)
-        self._model.eval()
-
-        self.available = True
-
-    def generate(self, claim: str, evidence: str = "") -> GenerationResult:
-        prompt = build_prompt(claim, evidence)
-
-        # 🔹 Mode CI / environnement minimal
-        if not self.available:
-            return GenerationResult(
-                counter_argument=(
-                    "(Mode CI) Dépendances ML non installées. "
-                    "Installe la version full pour activer la génération."
-                ),
-                used_device="cpu",
-                model_loaded=False,
-            )
-
-        import torch
-
-        inputs = self._tokenizer(
-            prompt, return_tensors="pt", truncation=True
-        ).to(self.device)
-
-        with torch.no_grad():
-            out = self._model.generate(
-                **inputs,
-                max_new_tokens=settings.max_new_tokens,
-                temperature=settings.temperature,
-                top_p=settings.top_p,
-                do_sample=True,
-            )
-
-        text = self._tokenizer.decode(out[0], skip_special_tokens=True).strip()
-
-        return GenerationResult(
-            counter_argument=text,
-            used_device=self.device,
-            model_loaded=True,
-        )
+    return {
+        "counterArgument": getattr(res, "counter_argument", str(res)),
+        "used_device": getattr(res, "used_device", "cpu"),
+        "model_loaded": getattr(res, "model_loaded", True),
+    }
