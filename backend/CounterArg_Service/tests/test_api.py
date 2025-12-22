@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from app import app
+from backend.CounterArg_Service.app import app
 
 client = TestClient(app)
 
