@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .config import settings
+from pydantic import BaseModel, ConfigDict
 
 
 def build_prompt(claim: str, evidence: str = "") -> str:
@@ -104,3 +104,18 @@ class CounterArgGenerator:
             used_device=self.device,
             model_loaded=True,
         )
+
+
+class Settings(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    model_name: str = "google/flan-t5-base"
+    max_new_tokens: int = 256
+    temperature: float = 0.7
+    top_p: float = 0.9
+    use_gpu: bool = False
+    device: str = "cpu"
+
+
+# Instance globale (à importer dans generator.py)
+settings = Settings()
