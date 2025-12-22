@@ -31,6 +31,4 @@ jobs:
 
 
       - name: Build Docker image
-        working-directory: backend/CounterArg_Service
-        run: |
-          docker build -t counterarg-service:ci .
+        run: docker build -t counterarg-service:ci backend/CounterArg_Service
