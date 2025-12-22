@@ -3,14 +3,12 @@ from pydantic import BaseModel
 
 from .generator import CounterArgGenerator
 
-
-app = FastAPI(title="CounterArg Service", version="1.0.0")
+app = FastAPI()
 
 gen = CounterArgGenerator()
 
 
 class PredictRequest(BaseModel):
-    # Le test envoie {"claim": "..."} donc on respecte ça
     claim: str
 
 
@@ -21,10 +19,6 @@ def health():
 
 @app.post("/predict")
 def predict(req: PredictRequest):
-    """
-    Le test attend:
-    - endpoint /predict
-    - status_code 200
-    """
-    counter = gen.generate(req.claim)
-    return {"counterArgument": counter}
+    return {
+        "counterArgument": gen.generate(req.claim)
+    }
