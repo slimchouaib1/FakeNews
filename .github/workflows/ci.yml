@@ -23,7 +23,10 @@ jobs:
 
       
       - name: Run tests
-        run: pytest -q
+        run: |
+          export PYTHONPATH=$GITHUB_WORKSPACE
+          pytest -q
+
       
       - name: Build Docker image
         run: |
