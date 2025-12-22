@@ -1,6 +1,6 @@
 # backend/CounterArg_Service/tests/test_api.py
 from fastapi.testclient import TestClient
-from backend.CounterArg_Service.app import app
+from app import app
 
 client = TestClient(app)
 
