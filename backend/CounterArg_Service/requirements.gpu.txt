@@ -1,0 +1,3 @@
+-r requirements.cpu.txt
+torch
+bitsandbytes==0.43.3
