@@ -1,15 +1,33 @@
+# python/venv
+.venv/
+venv/
+**/.venv/
+**/venv/
+__pycache__/
 **/__pycache__/
 **/*.pyc
+
+# git + cache
+.git/
 **/.pytest_cache/
 **/.mypy_cache/
 **/.ruff_cache/
-**/.venv/
-**/venv/
+
+# mlflow / outputs
 mlruns/
 mlflow.db
-*.log
 backend/CounterArg_Service/pipeline/outputs/
 backend/CounterArg_Service/pipeline/data/
-.artifacts/
+
+# datasets / big files (au cas où)
+data/
+datasets/
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.7z
+
+# OS
 .DS_Store
-.git/
+Thumbs.db
