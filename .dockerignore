@@ -1,0 +1,15 @@
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/venv/
+mlruns/
+mlflow.db
+*.log
+backend/CounterArg_Service/pipeline/outputs/
+backend/CounterArg_Service/pipeline/data/
+.artifacts/
+.DS_Store
+.git/
