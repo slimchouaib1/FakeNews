@@ -44,3 +44,14 @@ notebooks/**/checkpoint-*/
 
 # tests / packaging
 *.sqlite3
+
+# MLflow
+mlruns/
+mlflow.db
+
+# pipeline outputs
+backend/CounterArg_Service/pipeline/data/
+backend/CounterArg_Service/pipeline/outputs/
+
+# local prompts
+prompt_v1.txt
