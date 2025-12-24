@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # Copier d'abord les requirements (meilleur cache)
-COPY backend/CounterArg_Service/requirements.cpu.txt /app/requirements.cpu.txt
+COPY requirements.cpu.txt /app/requirements.cpu.txt
 
 # Installer torch CPU-only (évite CUDA + nvidia-*)
 RUN python -m pip install --no-cache-dir --upgrade pip && \
@@ -16,7 +16,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements.cpu.txt
 
 # Copier tout le repo
-COPY . .
+COPY .. /app/backend/CounterArg_Service
 
 EXPOSE 8000
 
