@@ -54,7 +54,7 @@ class CounterArgGenerator:
         import torch
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-        wanted = settings.DEVICE.lower()
+        wanted = settings.device.lower()
         self.device = "cuda" if (wanted == "cuda" and torch.cuda.is_available()) else "cpu"
 
         self._tokenizer = AutoTokenizer.from_pretrained(settings.model_name)
