@@ -1,10 +1,10 @@
-{"claim": "The Earth is flat."}
-{"claim": "Vaccines cause autism."}
-{"claim": "Climate change is a hoax."}
-{"claim": "Humans never landed on the Moon."}
-{"claim": "Drinking bleach cures diseases."}
-{"claim": "5G networks spread viruses."}
-{"claim": "Antibiotics kill viruses."}
-{"claim": "You only use 10% of your brain."}
-{"claim": "Sugar makes children hyperactive."}
-{"claim": "Cold weather causes colds."}
+{"claim":"The earth is flat.","target":"Scientific evidence shows that the Earth is round, confirmed by satellite images, gravity measurements, and centuries of astronomy."}
+{"claim":"Vaccines are dangerous.","target":"Vaccines are rigorously tested and monitored. They are proven to be safe and effective at preventing serious diseases."}
+{"claim":"Climate change is a hoax.","target":"Climate change is supported by extensive scientific evidence, including rising global temperatures and increased extreme weather events."}
+{"claim":"Humans never landed on the Moon.","target":"Multiple independent sources, moon rocks, and satellite images confirm that humans landed on the Moon during the Apollo missions."}
+{"claim":"5G networks cause cancer.","target":"There is no scientific evidence that 5G radiation causes cancer. International health organizations confirm it is safe."}
+{"claim":"COVID-19 was created deliberately.","target":"Scientific studies indicate that COVID-19 emerged naturally, with no evidence supporting deliberate creation."}
+{"claim":"The Earth is the center of the universe.","target":"Astronomical observations show that the Earth orbits the Sun, which itself is one of billions of stars in the universe."}
+{"claim":"Evolution is just a theory.","target":"Evolution is a well-supported scientific theory backed by fossil records, genetics, and observed biological changes."}
+{"claim":"Drinking bleach can cure diseases.","target":"Drinking bleach is extremely dangerous and can cause serious harm. There is no medical evidence supporting such claims."}
+{"claim":"The Great Wall of China is visible from space.","target":"Astronauts confirm that the Great Wall is not visible from space with the naked eye."}
