@@ -15,6 +15,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/CounterArg_Service/requirements.ci.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install CI deps (light)
         run: |
           python -m pip install --upgrade pip
@@ -25,4 +33,4 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           CI: "true"
         run: |
-          pytest -q
+          pytest -q backend/CounterArg_Service/tests
