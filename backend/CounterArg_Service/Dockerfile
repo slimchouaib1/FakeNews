@@ -2,23 +2,22 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# (Optionnel) petites libs système utiles pour certains wheels
+# Petites libs utiles (optionnel)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# Copier d'abord les requirements (meilleur cache)
-COPY requirements.cpu.txt /app/requirements.cpu.txt
+# 1) Copier requirements (meilleur cache)
+COPY backend/CounterArg_Service/requirements.cpu.txt /app/requirements.cpu.txt
 
-# Installer torch CPU-only (évite CUDA + nvidia-*)
+# 2) Installer deps (torch CPU-only)
 RUN python -m pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
     pip install --no-cache-dir -r /app/requirements.cpu.txt
 
-# Copier tout le repo
-COPY .. /app/backend/CounterArg_Service
+# 3) Copier backend + artifacts (modèle fine-tuné)
+COPY backend /app/backend
 
 EXPOSE 8000
 
-# Important: ton import uvicorn doit matcher ton package
 CMD ["uvicorn", "backend.CounterArg_Service.app:app", "--host", "0.0.0.0", "--port", "8000"]
