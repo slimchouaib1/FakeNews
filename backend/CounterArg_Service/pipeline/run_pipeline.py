@@ -8,8 +8,14 @@ import mlflow
 from backend.CounterArg_Service.config import settings
 
 
-def main() -> None:
-    # Chemins
+from backend.CounterArg_Service.pipeline.prepare_data import main as prepare_main
+from backend.CounterArg_Service.pipeline.train import train_main
+from backend.CounterArg_Service.pipeline.eval_generation import main as eval_main
+
+def main():
+    prepare_main()          # génère claims.jsonl
+    train_main()            # fine-tune le modèle (MLflow run)
+    eval_main()             # évalue et log metrics (si ton eval le fait)
     data_path = Path("backend/CounterArg_Service/pipeline/data/claims.jsonl")
     out_path = Path("backend/CounterArg_Service/pipeline/outputs/predictions.jsonl")
 
